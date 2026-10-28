@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>系列1 · 第2节 · 开发环境搭建</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../templates/theme.css">
+</head>
+<body>
+
+<div class="progress-rail"><div class="progress-fill" id="progressFill"></div></div>
+<div class="brandmark"><span class="dotpulse"></span>系列 01 · Rust AI 应用工程</div>
+
+<div class="deck" id="deck">
+  <div class="deck-track" id="track">
+
+    <!-- S1 封面 -->
+    <section class="slide cover">
+      <div class="thread-bg" aria-hidden="true">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none" style="width:100%;height:100%;">
+          <path class="t1" d="M-50,160 C 300,60 500,260 800,160 S 1300,60 1650,180"/>
+          <path class="t2" d="M-50,360 C 300,460 500,260 800,360 S 1300,460 1650,340"/>
+          <path class="t3" d="M-50,600 C 300,500 500,700 800,600 S 1300,500 1650,640"/>
+        </svg>
+      </div>
+      <div class="slide-body">
+        <div class="cover-top">
+          <div class="crab">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 14c0-4 3.6-8 8-8s8 4 8 8-3 6-8 6-8-2-8-6Z" stroke="#fff" stroke-width="1.8"/><circle cx="9" cy="12" r="1.3" fill="#fff"/><circle cx="15" cy="12" r="1.3" fill="#fff"/></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:13px;color:var(--ink-faint);letter-spacing:.06em;">RUST · AI APPLICATION ENGINEERING</div>
+            <div style="font-family:var(--font-mono);font-size:13px;color:var(--accent-1);font-weight:700;">系列 01 · 第 02 节 / 共 34 节</div>
+          </div>
+        </div>
+        <h1 class="title" style="font-size:clamp(34px,5.6vw,64px);max-width:13em;">开发环境搭建 —— <span class="accent">跟我做</span>，跑通<span class="accent2">第一个项目</span></h1>
+        <p class="lead">上一节讲完了为什么，这一节开始真正动手：装好 Rust toolchain，配好 VSCode + rust-analyzer，用 cargo new 建出第一个项目，然后跑通 Hello World。</p>
+        <div class="meta-row">
+          <div class="meta-item"><span class="k">时长</span><span class="v">约 15 分钟</span></div>
+          <div class="meta-item"><span class="k">形式</span><span class="v">安装 → 配置 → 建项目 → 跑起来</span></div>
+          <div class="meta-item"><span class="k">适合</span><span class="v">刚看完第1节、准备动手的你</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S2 安装 rustup + 验证 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>第一步 · 安装 toolchain</div>
+        <h1 class="title" style="font-size:clamp(26px,3.6vw,40px);">用 rustup 一条命令装好 Rust</h1>
+        <div class="diagram-wrap" style="padding:20px 24px;">
+          <svg viewBox="0 0 960 340">
+            <defs>
+              <marker id="a3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0L8,4L0,8Z" fill="#A79E8C"/></marker>
+            </defs>
+            <g font-family="Sora" font-weight="700" font-size="14" fill="#2E2A22" text-anchor="middle">
+              <rect x="30" y="10" width="200" height="40" rx="10" fill="#FBDCCF" stroke="#E2572B" stroke-width="1.5"/>
+              <text x="130" y="35">rustup</text>
+              <rect x="290" y="10" width="200" height="40" rx="10" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1.5"/>
+              <text x="390" y="35">rustc</text>
+              <rect x="550" y="10" width="200" height="40" rx="10" fill="#E4DEFF" stroke="#7C5CFC" stroke-width="1.5"/>
+              <text x="650" y="35">cargo</text>
+            </g>
+            <g stroke="#A79E8C" stroke-width="1.5" fill="none">
+              <path d="M230,30 L290,30" marker-end="url(#a3)"/>
+              <path d="M490,30 L550,30" marker-end="url(#a3)"/>
+            </g>
+            <g font-family="Inter" font-size="12.5" fill="#7A7264">
+              <text x="130" y="82" text-anchor="middle">版本管理器</text>
+              <text x="130" y="98" text-anchor="middle">安装/更新/切换</text>
+              <text x="390" y="82" text-anchor="middle">编译器</text>
+              <text x="390" y="98" text-anchor="middle">rustc --version</text>
+              <text x="650" y="82" text-anchor="middle">包管理+构建</text>
+              <text x="650" y="98" text-anchor="middle">cargo --version</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="12.5" fill="#2E2A22">
+              <text x="30" y="145" font-weight="700">安装命令</text>
+              <rect x="30" y="155" width="480" height="36" rx="8" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="46" y="178" fill="#7A7264">curl https://sh.rustup.rs -sSf | sh</text>
+              <rect x="30" y="205" width="480" height="36" rx="8" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="46" y="228" fill="#7A7264"># Windows: 下载 rustup-init.exe 运行</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="12.5" fill="#2E2A22">
+              <text x="560" y="145" font-weight="700">安装后验证</text>
+              <rect x="560" y="153" width="380" height="50" rx="8" fill="#E8F8F5" stroke="#0EA8A0" stroke-width="1.2"/>
+              <text x="576" y="174">$ rustc --version</text>
+              <text x="576" y="194" fill="#0EA8A0" font-size="11">rustc 1.8x.0 (yyyy-mm-dd)</text>
+              <rect x="560" y="215" width="380" height="50" rx="8" fill="#E8F8F5" stroke="#0EA8A0" stroke-width="1.2"/>
+              <text x="576" y="236">$ cargo --version</text>
+              <text x="576" y="256" fill="#0EA8A0" font-size="11">cargo 1.8x.0 (yyyy-mm-dd)</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- S4 配置 VSCode + rust-analyzer -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>第二步 · 配置 IDE</div>
+        <h1 class="title" style="font-size:clamp(26px,3.6vw,40px);">VSCode 装上 rust-analyzer 就够用了</h1>
+        <div class="callout callout--tip fragment">
+          <span class="callout-icon">💡</span>
+          <div><span class="callout-label">小提示：</span>打开 VSCode 扩展面板，搜索并安装 <b>rust-analyzer</b>（官方扩展，发布者 rust-lang）。装好后打开任意 .rs 文件，代码补全、类型提示、跳转定义会自动生效，不需要额外配置。</div>
+        </div>
+        <div class="callout callout--do fragment" style="margin-top:14px;">
+          <span class="callout-icon">✅</span>
+          <div><span class="callout-label">顺手装：</span><b>CodeLLDB</b>（断点调试）和 <b>Even Better TOML</b>（Cargo.toml 高亮），后面几节会用到。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S5 cargo new + 项目结构 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>第三步 · 创建项目</div>
+        <h1 class="title" style="font-size:clamp(24px,3.4vw,38px);">cargo new 一次性生成完整骨架</h1>
+        <div class="diagram-wrap" style="padding:20px 24px;">
+          <svg viewBox="0 0 960 320">
+            <g font-family="JetBrains Mono" font-size="13.5" fill="#2E2A22">
+              <rect x="20" y="10" width="380" height="38" rx="8" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="40" y="34">$ cargo new hello_ai</text>
+              <rect x="20" y="60" width="380" height="38" rx="8" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="40" y="84">$ cd hello_ai</text>
+            </g>
+            <g font-family="Sora" font-weight="700" font-size="14" fill="#2E2A22">
+              <text x="480" y="30">生成的目录结构</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="13" fill="#2E2A22">
+              <rect x="480" y="48" width="420" height="250" rx="10" fill="#FAF8F3" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="500" y="72">hello_ai/</text>
+              <line x1="500" y1="78" x2="500" y2="86" stroke="#A79E8C" stroke-width="1"/>
+              <rect x="520" y="86" width="240" height="30" rx="6" fill="#FBDCCF" stroke="#E2572B" stroke-width="1"/>
+              <text x="534" y="106" font-size="12">Cargo.toml</text>
+              <text x="620" y="106" font-size="11" fill="#E2572B">项目元信息 + 依赖清单</text>
+              <line x1="500" y1="122" x2="500" y2="130" stroke="#A79E8C" stroke-width="1"/>
+              <rect x="520" y="130" width="240" height="30" rx="6" fill="#FBE7C4" stroke="#E5A538" stroke-width="1"/>
+              <text x="534" y="150" font-size="12">.gitignore</text>
+              <text x="620" y="150" font-size="11" fill="#E5A538">自动忽略 target/</text>
+              <line x1="500" y1="166" x2="500" y2="174" stroke="#A79E8C" stroke-width="1"/>
+              <rect x="520" y="174" width="240" height="30" rx="6" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1"/>
+              <text x="534" y="194" font-size="12">src/</text>
+              <line x1="534" y1="200" x2="534" y2="208" stroke="#A79E8C" stroke-width="1"/>
+              <rect x="554" y="208" width="206" height="28" rx="6" fill="#E4DEFF" stroke="#7C5CFC" stroke-width="1"/>
+              <text x="568" y="227" font-size="12">main.rs</text>
+              <text x="634" y="227" font-size="11" fill="#7C5CFC">程序入口 fn main()</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- S6 cargo run 跑通 Hello World -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>跑起来</div>
+        <h1 class="title" style="font-size:clamp(26px,3.6vw,40px);">cargo run 跑通 Hello World</h1>
+        <div class="diagram-wrap" style="padding:20px 24px;">
+          <svg viewBox="0 0 960 320">
+            <defs>
+              <marker id="a4" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0L8,4L0,8Z" fill="#A79E8C"/></marker>
+            </defs>
+            <g font-family="Sora" font-weight="700" font-size="14" fill="#2E2A22">
+              <text x="20" y="28">源代码 (src/main.rs)</text>
+              <text x="480" y="28">执行流程</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="13.5" fill="#2E2A22">
+              <rect x="20" y="44" width="420" height="80" rx="10" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="40" y="68" fill="#E2572B">fn</text>
+              <text x="60" y="68"> main() {</text>
+              <text x="60" y="90" fill="#0EA8A0">println!</text>
+              <text x="124" y="90">(</text>
+              <text x="134" y="90" fill="#E5A538">"Hello, AI in Rust!"</text>
+              <text x="314" y="90">);</text>
+              <text x="40" y="112">}</text>
+            </g>
+            <g font-family="Sora" font-weight="700" font-size="13" fill="#2E2A22" text-anchor="middle">
+              <rect x="480" y="44" width="120" height="36" rx="10" fill="#FBDCCF" stroke="#E2572B" stroke-width="1.5"/>
+              <text x="540" y="67">cargo run</text>
+              <rect x="640" y="44" width="120" height="36" rx="10" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1.5"/>
+              <text x="700" y="67">编译</text>
+              <rect x="800" y="44" width="120" height="36" rx="10" fill="#E4DEFF" stroke="#7C5CFC" stroke-width="1.5"/>
+              <text x="860" y="67">运行</text>
+            </g>
+            <g stroke="#A79E8C" stroke-width="1.5" fill="none">
+              <path d="M600,62 L640,62" marker-end="url(#a4)"/>
+              <path d="M760,62 L800,62" marker-end="url(#a4)"/>
+            </g>
+            <g font-family="Inter" font-size="12" fill="#7A7264" text-anchor="middle">
+              <text x="540" y="120">自动完成</text>
+              <text x="700" y="120">首次较慢</text>
+              <text x="860" y="120">执行二进制</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="13" fill="#2E2A22">
+              <rect x="480" y="150" width="440" height="150" rx="10" fill="#E8F8F5" stroke="#0EA8A0" stroke-width="1.2"/>
+              <text x="500" y="174" fill="#7A7264">$ cargo run</text>
+              <text x="500" y="196" fill="#0EA8A0">Compiling hello_ai v0.1.0</text>
+              <text x="500" y="218" fill="#0EA8A0">Finished dev [unoptimized] target(s) in 0.6xs</text>
+              <text x="500" y="240" fill="#0EA8A0">Running `target/debug/hello_ai`</text>
+              <text x="500" y="272" font-weight="700" fill="#E2572B" font-size="14">Hello, AI in Rust!</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- S7 常见踩坑 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>常见踩坑</div>
+        <h1 class="title" style="font-size:clamp(26px,3.6vw,40px);">国内网络下最容易卡的一步</h1>
+        <div class="callout callout--watch fragment">
+          <span class="callout-icon">⚠️</span>
+          <div><span class="callout-label">注意：</span>首次 <b>cargo run / cargo build</b> 会去 crates.io 下载依赖索引，国内网络经常卡在这一步半天没反应，看起来像"卡死"，其实是在等超时。</div>
+        </div>
+        <div class="diagram-wrap fragment" style="padding:18px 24px;margin-top:14px;">
+          <svg viewBox="0 0 960 200">
+            <g font-family="Sora" font-weight="700" font-size="14" fill="#2E2A22" text-anchor="middle">
+              <text x="240" y="24">方案一：中科大 USTC 镜像</text>
+              <text x="720" y="24">方案二：字节跳动 RsProxy</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="12" fill="#2E2A22">
+              <rect x="20" y="40" width="440" height="140" rx="10" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="40" y="64" fill="#7A7264"># ~/.cargo/config.toml</text>
+              <text x="40" y="86" fill="#E2572B">[source.crates-io]</text>
+              <text x="60" y="106">replace-with = </text>
+              <text x="190" y="106" fill="#E5A538">"ustc"</text>
+              <text x="40" y="130" fill="#E2572B">[source.ustc]</text>
+              <text x="60" y="150">registry = </text>
+              <text x="140" y="150" fill="#0EA8A0">"sparse+https://mirrors.ustc.edu.cn/crates.io-index/"</text>
+              <rect x="500" y="40" width="440" height="140" rx="10" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="520" y="64" fill="#7A7264"># ~/.cargo/config.toml</text>
+              <text x="520" y="86" fill="#E2572B">[source.crates-io]</text>
+              <text x="540" y="106">replace-with = </text>
+              <text x="670" y="106" fill="#E5A538">"rsproxy"</text>
+              <text x="520" y="130" fill="#E2572B">[source.rsproxy]</text>
+              <text x="540" y="150">registry = </text>
+              <text x="640" y="150" fill="#0EA8A0">"sparse+https://rsproxy.cn/index/"</text>
+            </g>
+          </svg>
+        </div>
+        <p class="fragment" style="font-size:13px;color:var(--ink-soft);margin-top:10px;">配置一次，全局生效——cargo build / cargo run 的下载速度明显提升。</p>
+      </div>
+    </section>
+
+    <!-- S8 结尾 -->
+    <section class="slide end-slide">
+      <div class="slide-body">
+        <div class="crab" style="margin:0 auto 24px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 14c0-4 3.6-8 8-8s8 4 8 8-3 6-8 6-8-2-8-6Z" stroke="#fff" stroke-width="1.8"/><circle cx="9" cy="12" r="1.3" fill="#fff"/><circle cx="15" cy="12" r="1.3" fill="#fff"/></svg>
+        </div>
+        <div class="end-title">环境搭好了，下一节学异步基础</div>
+        <div class="callout callout--tip" style="max-width:640px;margin:0 auto;">
+          <span class="callout-icon">💡</span>
+          <div><span class="callout-label">小提示：</span>第3节是异步编程速成——调用大模型API本质上都是异步网络请求，这是后面所有系列的地基。</div>
+        </div>
+        <p style="font-family:var(--font-mono);font-size:13px;color:var(--ink-faint);margin-top:30px;">感谢观看 · 使用 ← → 或滑动重新回顾任意页面</p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="hud left"><span class="counter"><b id="curNum">01</b> / <span id="totalNum">07</span></span></div>
+<div class="hud right">
+  <button class="navbtn" id="prevBtn" aria-label="上一页">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="navbtn" id="nextBtn" aria-label="下一页">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+<div class="dots" id="dots"></div>
+
+<script src="../../templates/deck-engine.js"></script>
+</body>
+</html>

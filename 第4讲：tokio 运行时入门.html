@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>系列1 · 第4节 · tokio运行时入门</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../templates/theme.css">
+</head>
+<body>
+
+<div class="progress-rail"><div class="progress-fill" id="progressFill"></div></div>
+<div class="brandmark"><span class="dotpulse"></span>系列 01 · Rust AI 应用工程</div>
+
+<div class="deck" id="deck">
+  <div class="deck-track" id="track">
+
+    <!-- S1 封面 -->
+    <section class="slide cover">
+      <div class="thread-bg" aria-hidden="true">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none" style="width:100%;height:100%;">
+          <path class="t1" d="M-50,160 C 300,60 500,260 800,160 S 1300,60 1650,180"/>
+          <path class="t2" d="M-50,360 C 300,460 500,260 800,360 S 1300,460 1650,340"/>
+          <path class="t3" d="M-50,600 C 300,500 500,700 800,600 S 1300,500 1650,640"/>
+        </svg>
+      </div>
+      <div class="slide-body">
+        <div class="cover-top">
+          <div class="crab">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 14c0-4 3.6-8 8-8s8 4 8 8-3 6-8 6-8-2-8-6Z" stroke="#fff" stroke-width="1.8"/><circle cx="9" cy="12" r="1.3" fill="#fff"/><circle cx="15" cy="12" r="1.3" fill="#fff"/></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:13px;color:var(--ink-faint);letter-spacing:.06em;">RUST · AI APPLICATION ENGINEERING</div>
+            <div style="font-family:var(--font-mono);font-size:13px;color:var(--accent-1);font-weight:700;">系列 01 · 第 04 节 / 共 34 节</div>
+          </div>
+        </div>
+        <h1 class="title" style="font-size:clamp(32px,5.2vw,58px);max-width:14em;">tokio <span class="accent">运行时</span>入门：让并发<span class="accent2">真正跑起来</span></h1>
+        <p class="lead">第3节讲了 async/await 的语法长什么样，但代码还没真正"跑"过。这节我们用 <b>#[tokio::main]</b> 和 <b>tokio::spawn</b> 把并发落到实处，并用秒表量化它到底省了多少时间。</p>
+        <div class="meta-row">
+          <div class="meta-item"><span class="k">时长</span><span class="v">约 20-25 分钟</span></div>
+          <div class="meta-item"><span class="k">形式</span><span class="v">宏讲解 → 并发实测</span></div>
+          <div class="meta-item"><span class="k">前置</span><span class="v">第3节 async/await 语法</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S2 #[tokio::main] 宏 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>入口宏</div>
+        <h1 class="title" style="font-size:clamp(24px,3.4vw,38px);">#[tokio::main] 只是帮你少写几行样板代码</h1>
+        <p class="lead" style="margin-bottom:18px;">async fn main 本身不能直接运行——Rust 的 main 必须是同步函数。这个宏做的事情，就是生成一个同步 main，在里面创建一个 runtime，然后把你的 async 逻辑 block 在上面跑完。</p>
+        <div class="diagram-wrap" style="padding:18px 24px;">
+          <svg viewBox="0 0 960 240">
+            <defs>
+              <marker id="a7" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0L8,4L0,8Z" fill="#A79E8C"/></marker>
+            </defs>
+            <g font-family="Sora" font-weight="700" font-size="14" fill="#2E2A22" text-anchor="middle">
+              <text x="180" y="24">你写的代码</text>
+              <text x="720" y="24">宏展开后等价于</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="12.5" fill="#2E2A22">
+              <rect x="20" y="38" width="320" height="80" rx="10" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="40" y="62" fill="#E2572B">#[tokio::main]</text>
+              <text x="40" y="84" fill="#E2572B">async fn</text>
+              <text x="120" y="84"> main() {</text>
+              <text x="60" y="106" fill="#0EA8A0">println!</text>
+              <text x="124" y="106">(</text>
+              <text x="134" y="106" fill="#E5A538">"hello from async main"</text>
+              <text x="326" y="106">);</text>
+            </g>
+            <g stroke="#A79E8C" stroke-width="2" fill="none">
+              <path d="M350,78 L560,78" marker-end="url(#a7)"/>
+            </g>
+            <g font-family="Sora" font-weight="700" font-size="13" fill="#7A7264" text-anchor="middle">
+              <text x="455" y="70">宏转换</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="12.5" fill="#2E2A22">
+              <rect x="570" y="38" width="370" height="80" rx="10" fill="#E8F8F5" stroke="#0EA8A0" stroke-width="1.2"/>
+              <text x="590" y="62" fill="#E2572B">fn</text>
+              <text x="610" y="62"> main() {</text>
+              <text x="610" y="84" fill="#E2572B">let</text>
+              <text x="640" y="84"> rt = tokio::runtime::</text>
+              <text x="850" y="84" fill="#E5A538">Runtime::new()</text>
+              <text x="610" y="106">rt</text>
+              <text x="630" y="106" fill="#E5A538">.block_on</text>
+              <text x="710" y="106">(</text>
+              <text x="720" y="106" fill="#E2572B">async</text>
+              <text x="770" y="106"> { ... });</text>
+            </g>
+            <g font-family="Sora" font-weight="700" font-size="13" fill="#2E2A22" text-anchor="middle">
+              <rect x="150" y="140" width="140" height="34" rx="8" fill="#FBDCCF" stroke="#E2572B" stroke-width="1.2"/>
+              <text x="220" y="162">async fn main</text>
+              <rect x="330" y="140" width="140" height="34" rx="8" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1.2"/>
+              <text x="400" y="162">Runtime::new()</text>
+              <rect x="510" y="140" width="140" height="34" rx="8" fill="#E4DEFF" stroke="#7C5CFC" stroke-width="1.2"/>
+              <text x="580" y="162">block_on()</text>
+            </g>
+            <g stroke="#A79E8C" stroke-width="1.5" fill="none">
+              <path d="M290,157 L330,157" marker-end="url(#a7)"/>
+              <path d="M470,157 L510,157" marker-end="url(#a7)"/>
+            </g>
+            <g font-family="Inter" font-size="12" fill="#7A7264" text-anchor="middle">
+              <text x="220" y="190">书写的是</text>
+              <text x="400" y="190">宏创建</text>
+              <text x="580" y="190">执行器驱动</text>
+            </g>
+          </svg>
+        </div>
+        <div class="callout callout--tip fragment" style="margin-top:10px;">
+          <span class="callout-icon">💡</span>
+          <div><span class="callout-label">要点：</span>runtime 就是那个真正"调度并推进"所有 Future 的执行器，宏只是帮你省掉手写 <b>Runtime::new()</b> + <b>block_on()</b> 这两步。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S4 tokio::spawn -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>并发起飞</div>
+        <h1 class="title" style="font-size:clamp(24px,3.4vw,38px);">tokio::spawn：把任务交给运行时去调度</h1>
+        <p class="lead" style="margin-bottom:18px;">spawn 会把一个 Future 打包成一个独立的 task，交给 runtime 的调度器。多个 task 之间可以交替推进——这就是"并发"的来源。</p>
+        <div class="diagram-wrap" style="padding:18px 24px;">
+          <svg viewBox="0 0 960 220">
+            <defs>
+              <marker id="a8" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0L8,4L0,8Z" fill="#A79E8C"/></marker>
+            </defs>
+            <g font-family="Sora" font-weight="700" font-size="14" fill="#2E2A22" text-anchor="middle">
+              <text x="240" y="24">任务创建</text>
+              <text x="720" y="24">任务执行与等待</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="12.5" fill="#2E2A22">
+              <rect x="20" y="40" width="440" height="100" rx="10" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="40" y="64" fill="#E2572B">#[tokio::main]</text>
+              <text x="40" y="86" fill="#E2572B">async fn</text>
+              <text x="110" y="86"> main() {</text>
+              <text x="60" y="108" fill="#E2572B">let</text>
+              <text x="90" y="108"> task1 = tokio::</text>
+              <text x="230" y="108" fill="#E5A538">spawn</text>
+              <text x="280" y="108">(</text>
+              <text x="290" y="108" fill="#0EA8A0">fetch</text>
+              <text x="330" y="108">(</text>
+              <text x="340" y="108" fill="#E5A538">"用户信息"</text>
+              <text x="410" y="108">, 1000));</text>
+              <text x="60" y="130" fill="#E2572B">let</text>
+              <text x="90" y="130"> task2 = tokio::</text>
+              <text x="230" y="130" fill="#E5A538">spawn</text>
+              <text x="280" y="130">(</text>
+              <text x="290" y="130" fill="#0EA8A0">fetch</text>
+              <text x="330" y="130">(</text>
+              <text x="340" y="130" fill="#E5A538">"商品价格"</text>
+              <text x="410" y="130">, 1000));</text>
+            </g>
+            <g stroke="#A79E8C" stroke-width="1.5" fill="none">
+              <path d="M470,90 L500,90" marker-end="url(#a8)"/>
+            </g>
+            <g font-family="JetBrains Mono" font-size="12.5" fill="#2E2A22">
+              <rect x="510" y="40" width="430" height="100" rx="10" fill="#E8F8F5" stroke="#0EA8A0" stroke-width="1.2"/>
+              <text x="530" y="64" fill="#7A7264">// 两个 task 已被 runtime 接管</text>
+              <text x="530" y="86" fill="#7A7264">// 可能已经在并发推进了</text>
+              <text x="530" y="108">task1</text>
+              <text x="570" y="108" fill="#E2572B">.await</text>
+              <text x="624" y="108">.unwrap();</text>
+              <text x="530" y="130">task2</text>
+              <text x="570" y="130" fill="#E2572B">.await</text>
+              <text x="624" y="130">.unwrap();</text>
+            </g>
+            <g font-family="Sora" font-weight="700" font-size="13" fill="#2E2A22" text-anchor="middle">
+              <rect x="60" y="160" width="140" height="30" rx="8" fill="#FBDCCF" stroke="#E2572B" stroke-width="1"/>
+              <text x="130" y="180">spawn task1</text>
+              <rect x="240" y="160" width="140" height="30" rx="8" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1"/>
+              <text x="310" y="180">spawn task2</text>
+              <rect x="420" y="160" width="140" height="30" rx="8" fill="#E4DEFF" stroke="#7C5CFC" stroke-width="1"/>
+              <text x="490" y="180">await 收结果</text>
+            </g>
+            <g stroke="#A79E8C" stroke-width="1.5" fill="none">
+              <path d="M200,175 L240,175" marker-end="url(#a8)"/>
+              <path d="M380,175 L420,175" marker-end="url(#a8)"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- S5 实测对比 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>实测对比</div>
+        <h1 class="title" style="font-size:clamp(24px,3.4vw,38px);">三个 1 秒的模拟请求：串行 3 秒 vs 并发 1 秒</h1>
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 1000 220">
+            <g font-family="JetBrains Mono" font-size="13" fill="#2E2A22">
+              <text x="0" y="24" font-weight="700">串行 await（依次等待，共 ~3s）</text>
+              <rect x="0"   y="34" width="300" height="34" rx="8" fill="#FBDCCF" stroke="#E2572B" stroke-width="1.5"/><text x="150" y="56" text-anchor="middle">请求 A · 1s</text>
+              <rect x="310" y="34" width="300" height="34" rx="8" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1.5"/><text x="460" y="56" text-anchor="middle">请求 B · 1s</text>
+              <rect x="620" y="34" width="300" height="34" rx="8" fill="#E4DEFF" stroke="#7C5CFC" stroke-width="1.5"/><text x="770" y="56" text-anchor="middle">请求 C · 1s</text>
+
+              <text x="0" y="120" font-weight="700">tokio::spawn 并发（交替推进，共 ~1s）</text>
+              <rect x="0" y="130" width="300" height="26" rx="7" fill="#FBDCCF" stroke="#E2572B" stroke-width="1.5"/><text x="150" y="148" text-anchor="middle" font-size="12">请求 A · 1s</text>
+              <rect x="0" y="162" width="300" height="26" rx="7" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1.5"/><text x="150" y="180" text-anchor="middle" font-size="12">请求 B · 1s</text>
+              <rect x="0" y="194" width="300" height="26" rx="7" fill="#E4DEFF" stroke="#7C5CFC" stroke-width="1.5"/><text x="150" y="212" text-anchor="middle" font-size="12">请求 C · 1s</text>
+            </g>
+            <line x1="300" y1="0" x2="300" y2="220" stroke="#A79E8C" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="304" y="14" font-size="11" fill="#7A7264" font-family="JetBrains Mono">≈1s 分界线</text>
+          </svg>
+        </div>
+        <div class="out-block" style="margin-top:16px;">
+          <b>串行耗时: 3.02s</b>&nbsp;&nbsp;（一个 Future 完全推进完才开始下一个）<br>
+          <b>并发耗时: 1.01s</b>&nbsp;&nbsp;（三个 task 交给 runtime 调度，可以交替推进）
+        </div>
+      </div>
+    </section>
+
+    <!-- S6 JoinHandle / 等待所有任务 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>收尾姿势</div>
+        <h1 class="title" style="font-size:clamp(24px,3.4vw,38px);">JoinHandle：两种等待多个任务的方式</h1>
+        <p class="lead" style="margin-bottom:16px;">tokio::spawn 返回一个 <b>JoinHandle&lt;T&gt;</b>，.await 它才能拿到任务的返回值。任务数量固定时用 tokio::join!，数量不固定时收集成 Vec 再逐个 await。</p>
+        <div class="diagram-wrap" style="padding:18px 24px;">
+          <svg viewBox="0 0 960 220">
+            <g font-family="Sora" font-weight="700" font-size="14" fill="#2E2A22" text-anchor="middle">
+              <text x="240" y="24">写法一：固定数量，tokio::join!</text>
+              <text x="720" y="24">写法二：数量不固定，Vec 收集</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="12" fill="#2E2A22">
+              <rect x="20" y="40" width="440" height="100" rx="10" fill="#FFF9F0" stroke="#DCD2B8" stroke-width="1.2"/>
+              <text x="40" y="64" fill="#E2572B">let</text>
+              <text x="70" y="64"> (a, b, c) = tokio::</text>
+              <text x="256" y="64" fill="#E5A538">join!</text>
+              <text x="296" y="64">(</text>
+              <text x="60" y="84" fill="#0EA8A0">fetch</text>
+              <text x="100" y="84">(</text>
+              <text x="110" y="84" fill="#E5A538">"A"</text>
+              <text x="140" y="84">, 1000),</text>
+              <text x="60" y="104" fill="#0EA8A0">fetch</text>
+              <text x="100" y="104">(</text>
+              <text x="110" y="104" fill="#E5A538">"B"</text>
+              <text x="140" y="104">, 1000),</text>
+              <text x="60" y="124" fill="#0EA8A0">fetch</text>
+              <text x="100" y="124">(</text>
+              <text x="110" y="124" fill="#E5A538">"C"</text>
+              <text x="140" y="124">, 1000),</text>
+              <text x="250" y="124">);</text>
+            </g>
+            <g font-family="JetBrains Mono" font-size="12" fill="#2E2A22">
+              <rect x="500" y="40" width="440" height="100" rx="10" fill="#E8F8F5" stroke="#0EA8A0" stroke-width="1.2"/>
+              <text x="520" y="64" fill="#E2572B">let mut</text>
+              <text x="580" y="64"> handles = </text>
+              <text x="680" y="64" fill="#0EA8A0">Vec</text>
+              <text x="710" y="64">::new();</text>
+              <text x="520" y="84" fill="#E2572B">for</text>
+              <text x="550" y="84"> name </text>
+              <text x="600" y="84" fill="#E2572B">in</text>
+              <text x="630" y="84"> [</text>
+              <text x="650" y="84" fill="#E5A538">"A"</text>
+              <text x="680" y="84">, </text>
+              <text x="690" y="84" fill="#E5A538">"B"</text>
+              <text x="720" y="84">, </text>
+              <text x="730" y="84" fill="#E5A538">"C"</text>
+              <text x="760" y="84">] {</text>
+              <text x="540" y="104" fill="#7A7264">handles.push(tokio::spawn(fetch(...)));</text>
+              <text x="520" y="124" fill="#E2572B">for</text>
+              <text x="550" y="124"> h </text>
+              <text x="570" y="124" fill="#E2572B">in</text>
+              <text x="590" y="124"> handles { h</text>
+              <text x="680" y="124" fill="#E2572B">.await</text>
+              <text x="730" y="124">.unwrap(); }</text>
+            </g>
+            <g font-family="Sora" font-weight="700" font-size="13" fill="#2E2A22" text-anchor="middle">
+              <rect x="80" y="160" width="120" height="30" rx="8" fill="#FBDCCF" stroke="#E2572B" stroke-width="1"/>
+              <text x="140" y="180">一次性等待</text>
+              <rect x="280" y="160" width="120" height="30" rx="8" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1"/>
+              <text x="340" y="180">解构到变量</text>
+              <rect x="580" y="160" width="120" height="30" rx="8" fill="#E4DEFF" stroke="#7C5CFC" stroke-width="1"/>
+              <text x="640" y="180">逐个 await</text>
+              <rect x="780" y="160" width="120" height="30" rx="8" fill="#FBE7C4" stroke="#E5A538" stroke-width="1"/>
+              <text x="840" y="180">动态数量</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- S7 结尾 -->
+    <section class="slide end-slide">
+      <div class="slide-body">
+        <div class="crab" style="margin:0 auto 24px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 14c0-4 3.6-8 8-8s8 4 8 8-3 6-8 6-8-2-8-6Z" stroke="#fff" stroke-width="1.8"/><circle cx="9" cy="12" r="1.3" fill="#fff"/><circle cx="15" cy="12" r="1.3" fill="#fff"/></svg>
+        </div>
+        <div class="end-title">下一节：把项目结构立起来</div>
+        <div class="callout callout--tip" style="max-width:640px;margin:0 auto;">
+          <span class="callout-icon">💡</span>
+          <div><span class="callout-label">小提示：</span>第5节讲 Cargo workspace 与项目结构规划——在真正开始调用 API 之前，先把 common / 各系列子项目的骨架搭好。</div>
+        </div>
+        <p style="font-family:var(--font-mono);font-size:13px;color:var(--ink-faint);margin-top:30px;">感谢观看 · 使用 ← → 或滑动重新回顾任意页面</p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="hud left"><span class="counter"><b id="curNum">01</b> / <span id="totalNum">06</span></span></div>
+<div class="hud right">
+  <button class="navbtn" id="prevBtn" aria-label="上一页">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="navbtn" id="nextBtn" aria-label="下一页">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+<div class="dots" id="dots"></div>
+
+<script src="../../templates/deck-engine.js"></script>
+</body>
+</html>

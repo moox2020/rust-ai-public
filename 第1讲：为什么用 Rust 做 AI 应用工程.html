@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>系列1 · 第1节 · 为什么用 Rust 做 AI 应用工程</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../templates/theme.css">
+</head>
+<body>
+
+<div class="progress-rail"><div class="progress-fill" id="progressFill"></div></div>
+<div class="brandmark"><span class="dotpulse"></span>系列 01 · Rust AI 应用工程</div>
+
+<div class="deck" id="deck">
+  <div class="deck-track" id="track">
+
+    <!-- S1 封面 -->
+    <section class="slide cover">
+      <div class="thread-bg" aria-hidden="true">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none" style="width:100%;height:100%;">
+          <path class="t1" d="M-50,160 C 300,60 500,260 800,160 S 1300,60 1650,180"/>
+          <path class="t2" d="M-50,360 C 300,460 500,260 800,360 S 1300,460 1650,340"/>
+          <path class="t3" d="M-50,600 C 300,500 500,700 800,600 S 1300,500 1650,640"/>
+        </svg>
+      </div>
+      <div class="slide-body">
+        <div class="cover-top">
+          <div class="crab">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 14c0-4 3.6-8 8-8s8 4 8 8-3 6-8 6-8-2-8-6Z" stroke="#fff" stroke-width="1.8"/><circle cx="9" cy="12" r="1.3" fill="#fff"/><circle cx="15" cy="12" r="1.3" fill="#fff"/></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:13px;color:var(--ink-faint);letter-spacing:.06em;">RUST · AI APPLICATION ENGINEERING</div>
+            <div style="font-family:var(--font-mono);font-size:13px;color:var(--accent-1);font-weight:700;">系列 01 · 第 01 节 / 共 34 节</div>
+          </div>
+        </div>
+        <h1 class="title" style="font-size:clamp(34px,5.6vw,64px);max-width:16em;">为什么用 <span class="accent">Rust</span> 做 <span class="accent2">AI 应用工程</span></h1>
+        <p class="lead">从今天开始，我们花 34 节课把开发环境、模型调用、生产部署一步步搭起来——这是一门以"能上生产"为标准的实用课程。</p>
+        <div class="meta-row">
+          <div class="meta-item"><span class="k">时长</span><span class="v">约 12 分钟</span></div>
+          <div class="meta-item"><span class="k">形式</span><span class="v">边界澄清 → 定位 → 路线图</span></div>
+          <div class="meta-item"><span class="k">适合</span><span class="v">有 Python/Rust 基础的应用开发者</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S2 先说边界 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>先说边界</div>
+        <h1 class="title" style="font-size:clamp(26px,3.6vw,40px);">先说清楚 Rust 不擅长的部分</h1>
+        <div class="callout callout--limit fragment">
+          <span class="callout-icon">🚧</span>
+          <div><span class="callout-label">边界：</span>模型训练 / 微调 / 学术复现这类场景。
+            这些场景请直接用 <b>Python + PyTorch / Transformers</b>，本课程不会硬造轮子。</div>
+        </div>
+        <p class="fragment" style="color:var(--ink-soft);font-size:14.5px;margin-top:14px;">这不是谦虚，是从第一节就建立的诚实边界——后面 7 个系列都会守住这条线。</p>
+      </div>
+    </section>
+
+    <!-- S4 Rust 的主场 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>Rust 的主场</div>
+        <h1 class="title" style="font-size:clamp(26px,3.6vw,40px);">但"AI 应用工程层"是另一件事</h1>
+        <div class="diagram-wrap" style="padding:26px 22px;">
+          <svg viewBox="0 0 980 120" style="max-width:900px;">
+            <g font-family="Sora" font-weight="700" font-size="15" fill="#2E2A22" text-anchor="middle">
+              <rect x="10" y="40" width="140" height="40" rx="20" fill="#FBDCCF" stroke="#E2572B" stroke-width="1.5"/><text x="80" y="65">调用模型</text>
+              <rect x="180" y="40" width="140" height="40" rx="20" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1.5"/><text x="250" y="65">工具调用</text>
+              <rect x="350" y="40" width="120" height="40" rx="20" fill="#E4DEFF" stroke="#7C5CFC" stroke-width="1.5"/><text x="410" y="65">MCP</text>
+              <rect x="500" y="40" width="120" height="40" rx="20" fill="#FBE7C4" stroke="#E5A538" stroke-width="1.5"/><text x="560" y="65">RAG</text>
+              <rect x="650" y="40" width="150" height="40" rx="20" fill="#FBDCCF" stroke="#E2572B" stroke-width="1.5"/><text x="725" y="65">Agent 编排</text>
+              <rect x="830" y="40" width="140" height="40" rx="20" fill="#CDF1EE" stroke="#0EA8A0" stroke-width="1.5"/><text x="900" y="65">生产部署</text>
+            </g>
+            <g stroke="#A79E8C" stroke-width="1.6" fill="none">
+              <path d="M150,60 L180,60" marker-end="url(#a1)"/>
+              <path d="M320,60 L350,60" marker-end="url(#a1)"/>
+              <path d="M470,60 L500,60" marker-end="url(#a1)"/>
+              <path d="M620,60 L650,60" marker-end="url(#a1)"/>
+              <path d="M800,60 L830,60" marker-end="url(#a1)"/>
+            </g>
+            <defs><marker id="a1" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,0L7,3.5L0,7Z" fill="#A79E8C"/></marker></defs>
+          </svg>
+        </div>
+        <div class="callout callout--do fragment" style="margin-top:18px;">
+          <span class="callout-icon">✅</span>
+          <div><span class="callout-label">好消息：</span>这条链路的本质是 HTTP + JSON + 并发编排 + 服务部署——恰好是 Rust 的强项。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S5 生态现状 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>生态现状</div>
+        <h1 class="title" style="font-size:clamp(24px,3.4vw,38px);">支撑这条链路的生态已经不再是空白</h1>
+        <table class="field-table">
+          <caption>Cargo.toml [dependencies]（本系列会陆续用到）</caption>
+          <tr><th>crate</th><th>版本</th><th>用途</th></tr>
+          <tr><td><span class="inline-code">rmcp</span></td><td><span class="inline-code">0.x</span></td><td>官方 MCP Rust SDK，系列4会深度使用</td></tr>
+          <tr><td><span class="inline-code">rig-core</span></td><td><span class="inline-code">0.x</span></td><td>Agent 编排框架，系列6会用到</td></tr>
+          <tr><td><span class="inline-code">candle</span></td><td><span class="inline-code">0.x</span></td><td>本地推理 / embedding</td></tr>
+          <tr><td><span class="inline-code">qdrant-client</span></td><td><span class="inline-code">1.x</span></td><td>向量数据库，系列5核心依赖</td></tr>
+          <tr><td><span class="inline-code">polars</span></td><td><span class="inline-code">0.x</span></td><td>数据处理 / chunking</td></tr>
+          <tr><td><span class="inline-code">axum</span></td><td><span class="inline-code">0.x</span></td><td>生产级服务框架，系列7会用它封装Agent</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- S6 课程地图 -->
+    <section class="slide">
+      <div class="slide-body">
+        <div class="eyebrow"><span class="dot"></span>课程地图</div>
+        <h1 class="title" style="font-size:clamp(24px,3.4vw,38px);">整套课程会走完这 8 个系列</h1>
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 1040 130">
+            <g font-family="JetBrains Mono" font-size="12" fill="#2E2A22" text-anchor="middle">
+              <rect x="0" y="45" width="115" height="40" rx="10" fill="#FBDCCF" stroke="#E2572B"/><text x="57" y="69">01 基础入门</text>
+              <rect x="140" y="45" width="130" height="40" rx="10" fill="#CDF1EE" stroke="#0EA8A0"/><text x="205" y="69">02 结构化输出</text>
+              <rect x="295" y="45" width="115" height="40" rx="10" fill="#E4DEFF" stroke="#7C5CFC"/><text x="352" y="69">03 工具调用</text>
+              <rect x="435" y="45" width="115" height="40" rx="10" fill="#FBE7C4" stroke="#E5A538"/><text x="492" y="69">04 MCP 实战</text>
+              <rect x="575" y="45" width="120" height="40" rx="10" fill="#FBDCCF" stroke="#E2572B"/><text x="635" y="69">05 RAG 工程化</text>
+              <rect x="720" y="45" width="120" height="40" rx="10" fill="#CDF1EE" stroke="#0EA8A0"/><text x="780" y="69">06 Agent 编排</text>
+              <rect x="865" y="45" width="115" height="40" rx="10" fill="#E4DEFF" stroke="#7C5CFC"/><text x="922" y="69">07 生产部署</text>
+            </g>
+            <g stroke="#A79E8C" stroke-width="1.5" fill="none">
+              <path d="M115,65 L140,65" marker-end="url(#a2)"/><path d="M270,65 L295,65" marker-end="url(#a2)"/>
+              <path d="M410,65 L435,65" marker-end="url(#a2)"/><path d="M550,65 L575,65" marker-end="url(#a2)"/>
+              <path d="M695,65 L720,65" marker-end="url(#a2)"/><path d="M840,65 L865,65" marker-end="url(#a2)"/>
+            </g>
+            <defs><marker id="a2" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,0L7,3.5L0,7Z" fill="#A79E8C"/></marker></defs>
+            <text x="0" y="120" font-family="Inter" font-size="12" fill="#7A7264">→ 系列 08「Rust×Python 混合工程」贯穿收尾，图中未画出</text>
+          </svg>
+        </div>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin-top:10px;">今天在最左边，系列 4 会是本课程最独特的部分——市面上几乎没有 Rust 版 MCP 教程。</p>
+      </div>
+    </section>
+
+    <!-- S7 结尾 -->
+    <section class="slide end-slide">
+      <div class="slide-body">
+        <div class="crab" style="margin:0 auto 24px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 14c0-4 3.6-8 8-8s8 4 8 8-3 6-8 6-8-2-8-6Z" stroke="#fff" stroke-width="1.8"/><circle cx="9" cy="12" r="1.3" fill="#fff"/><circle cx="15" cy="12" r="1.3" fill="#fff"/></svg>
+        </div>
+        <div class="end-title">下一节我们开始动手</div>
+        <div class="callout callout--tip" style="max-width:640px;margin:0 auto;">
+          <span class="callout-icon">💡</span>
+          <div><span class="callout-label">小提示：</span>第2节安装 Rust toolchain、配置 rust-analyzer、跑通第一个 cargo 项目。</div>
+        </div>
+        <p style="font-family:var(--font-mono);font-size:13px;color:var(--ink-faint);margin-top:30px;">感谢观看 · 使用 ← → 或滑动重新回顾任意页面</p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="hud left"><span class="counter"><b id="curNum">01</b> / <span id="totalNum">06</span></span></div>
+<div class="hud right">
+  <button class="navbtn" id="prevBtn" aria-label="上一页">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="navbtn" id="nextBtn" aria-label="下一页">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+<div class="dots" id="dots"></div>
+
+<script src="../../templates/deck-engine.js"></script>
+</body>
+</html>

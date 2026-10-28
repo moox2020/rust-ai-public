@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>第5讲：一个 Workspace，如何撑起一个 AI 应用的骨架？——Cargo 工作空间与多 Crate 工程实战</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --rust-orange:#CE422B;
+  --rust-orange-2:#E8734F;
+  --rust-gold:#F0A868;
+  --ai-teal:#2E7D6B;
+  --ink:#3B2E28;
+  --ink-soft:#7A6A5E;
+  --bg:#FBF6EE;
+  --panel:#FFFFFF;
+  --panel-edge:#ECDFC9;
+  --code-bg:#2B231F;
+  --code-text:#F3E9DD;
+  --code-dim:#B7A692;
+  --shadow: 0 18px 40px -18px rgba(59,46,40,.28);
+  --sc: 'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --serif-num: 'Space Grotesk', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sc);}
+body{overflow:hidden;}
+h1,h2,h3{font-family:var(--sc);margin:0;font-weight:900;letter-spacing:.01em;}
+p{margin:0;}
+::selection{background:var(--rust-orange);color:#fff;}
+
+.defs-holder{position:absolute;width:0;height:0;overflow:hidden;}
+
+.brand{
+  position:fixed;top:22px;left:28px;z-index:50;
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--serif-num);font-weight:600;font-size:14px;color:var(--ink);
+  background:rgba(251,246,238,.82);backdrop-filter:blur(6px);
+  padding:8px 14px 8px 8px;border-radius:999px;border:1px solid var(--panel-edge);
+}
+.brand .gear-icon{width:22px;height:22px;color:var(--rust-orange);animation:spin 14s linear infinite;}
+.brand b{color:var(--rust-orange);font-weight:700;}
+
+.counter{
+  position:fixed;top:22px;right:28px;z-index:50;
+  font-family:var(--serif-num);font-size:13px;letter-spacing:.04em;color:var(--ink-soft);
+  background:rgba(251,246,238,.82);backdrop-filter:blur(6px);
+  padding:7px 14px;border-radius:999px;border:1px solid var(--panel-edge);
+}
+.counter b{color:var(--rust-orange);font-size:15px;}
+
+.progress-track{position:fixed;top:0;left:0;width:100%;height:4px;background:var(--panel-edge);z-index:60;}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--rust-orange),var(--rust-gold));transition:width .35s ease;}
+
+.dots{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:50;
+  display:flex;gap:9px;background:rgba(251,246,238,.82);backdrop-filter:blur(6px);
+  padding:9px 12px;border-radius:999px;border:1px solid var(--panel-edge);
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--panel-edge);border:none;cursor:pointer;padding:0;transition:all .25s ease;}
+.dot.active{background:var(--rust-orange);width:20px;border-radius:5px;}
+
+.nav-btn{
+  position:fixed;top:50%;transform:translateY(-50%);z-index:50;
+  width:44px;height:44px;border-radius:50%;border:1px solid var(--panel-edge);
+  background:rgba(255,255,255,.9);backdrop-filter:blur(6px);color:var(--rust-orange);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);
+  transition:transform .2s ease, background .2s ease;
+}
+.nav-btn:hover{background:var(--rust-orange);color:#fff;transform:translateY(-50%) scale(1.06);}
+.nav-btn.prev{left:20px;}
+.nav-btn.next{right:20px;}
+.nav-btn svg{width:18px;height:18px;}
+.nav-btn[disabled]{opacity:.25;pointer-events:none;}
+
+.deck{
+  height:100%;width:100%;display:flex;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch;
+}
+.deck::-webkit-scrollbar{display:none;}
+.slide{
+  flex:0 0 100vw;height:100%;scroll-snap-align:start;position:relative;
+  overflow-y:auto;overflow-x:hidden;
+  padding:96px 8vw 80px 8vw;
+}
+.slide::-webkit-scrollbar{width:6px;}
+.slide::-webkit-scrollbar-thumb{background:var(--panel-edge);border-radius:3px;}
+.slide-inner{max-width:1180px;margin:0 auto;min-height:calc(100vh - 176px);display:flex;flex-direction:column;justify-content:center;}
+
+.gear-bg{position:absolute;color:var(--rust-orange);opacity:.06;pointer-events:none;z-index:0;animation:spin 40s linear infinite;}
+.gear-bg.slow{animation-duration:60s;}
+.gear-bg.rev{animation-direction:reverse;}
+
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;font-family:var(--serif-num);
+  font-size:13px;font-weight:600;color:var(--rust-orange);letter-spacing:.03em;
+  margin-bottom:18px;
+}
+.eyebrow::before{content:"";width:16px;height:2px;background:var(--rust-orange);border-radius:2px;}
+.h1{font-size:clamp(32px,4.2vw,54px);line-height:1.18;color:var(--ink);}
+.h1 em{font-style:normal;color:var(--rust-orange);}
+.h2{font-size:clamp(26px,3vw,38px);line-height:1.22;color:var(--ink);margin-bottom:22px;}
+.lead{font-size:18px;line-height:1.85;color:var(--ink-soft);max-width:68ch;}
+.lead + .lead{margin-top:14px;}
+
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .65s cubic-bezier(.2,.7,.3,1),transform .65s cubic-bezier(.2,.7,.3,1);transition-delay:calc(var(--i,0) * .09s);}
+.slide.in-view .reveal{opacity:1;transform:translateY(0);}
+
+.draw{transition:stroke-dashoffset 1.3s cubic-bezier(.3,.6,.2,1);transition-delay:calc(var(--i,0) * .12s);}
+.slide:not(.in-view) .draw{stroke-dashoffset:var(--len,300)!important;}
+.slide.in-view .draw{stroke-dashoffset:0;}
+
+.grid{display:grid;gap:20px;}
+.grid.cols-2{grid-template-columns:1fr 1fr;}
+.grid.cols-3{grid-template-columns:repeat(3,1fr);}
+
+.card{
+  background:var(--panel);border:1px solid var(--panel-edge);border-radius:16px;
+  padding:22px 24px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--rust-orange),var(--rust-gold));}
+.card h3{font-size:17px;margin-bottom:8px;padding-left:8px;}
+.card p{font-size:14.5px;line-height:1.75;color:var(--ink-soft);padding-left:8px;}
+.card .tag{display:inline-block;font-family:var(--mono);font-size:11.5px;color:var(--rust-orange);background:#FBEAE3;padding:2px 8px;border-radius:6px;margin-left:8px;margin-bottom:8px;}
+.card .tag.teal{color:var(--ai-teal);background:#E6F1EE;}
+
+.pill-list{display:flex;flex-direction:column;gap:14px;margin-top:8px;}
+.pill{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--panel-edge);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);}
+.pill .dotmark{flex:0 0 10px;width:10px;height:10px;border-radius:50%;background:var(--rust-orange);margin-top:7px;}
+.pill p{font-size:15px;line-height:1.7;color:var(--ink);}
+.pill b{color:var(--rust-orange);}
+code.inline{font-family:var(--mono);color:var(--rust-orange);background:#FBEAE3;padding:1px 6px;border-radius:5px;font-size:.92em;}
+
+.diagram-card{background:var(--panel);border:1px solid var(--panel-edge);border-radius:20px;box-shadow:var(--shadow);padding:26px 30px;position:relative;z-index:1;}
+.diagram-card .cap{font-size:13px;color:var(--ink-soft);margin-top:10px;text-align:center;}
+
+.code-chip{background:var(--code-bg);border-radius:14px;padding:18px 22px;font-family:var(--mono);font-size:13.5px;line-height:1.8;color:var(--code-text);overflow-x:auto;box-shadow:var(--shadow);}
+.code-chip .cm{color:var(--code-dim);}
+.code-chip .kw{color:var(--rust-gold);}
+.code-chip .str{color:#B9D18C;}
+.terminal{background:var(--code-bg);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;}
+.terminal .bar{display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+.terminal .bar span{width:10px;height:10px;border-radius:50%;}
+.terminal .bar span:nth-child(1){background:#E8734F;}
+.terminal .bar span:nth-child(2){background:#F0A868;}
+.terminal .bar span:nth-child(3){background:#7CA97A;}
+.terminal pre{margin:0;padding:18px 22px;font-family:var(--mono);font-size:13px;line-height:1.85;color:var(--code-text);overflow-x:auto;}
+.terminal .p{color:var(--rust-orange-2);}
+.terminal .out{color:var(--code-dim);}
+.terminal .ok{color:#9FCB88;}
+
+.badge-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+.badge{font-family:var(--mono);font-size:12.5px;background:#FBEAE3;color:var(--rust-orange);padding:5px 12px;border-radius:999px;border:1px solid #F3CFC1;}
+
+.foot-note{margin-top:22px;font-size:13.5px;color:var(--ink-soft);display:flex;align-items:center;gap:8px;}
+.foot-note svg{width:15px;height:15px;color:var(--rust-orange);flex:0 0 auto;}
+
+.check{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--panel-edge);}
+.check:last-child{border-bottom:none;}
+.check .c-icon{width:26px;height:26px;border-radius:50%;background:var(--rust-orange);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+.check .c-icon svg{width:14px;height:14px;color:#fff;}
+.check p{font-size:15.5px;color:var(--ink);}
+
+.cover{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;height:100%;position:relative;}
+.cover .big-gear{position:absolute;right:-4vw;top:50%;transform:translateY(-50%);width:min(46vw,560px);height:min(46vw,560px);color:var(--rust-orange);opacity:.12;animation:spin 50s linear infinite;}
+.cover .kicker{font-family:var(--serif-num);font-size:14px;color:var(--rust-orange);font-weight:600;letter-spacing:.04em;margin-bottom:22px;display:flex;align-items:center;gap:10px;}
+.cover .kicker .rustmark{width:20px;height:20px;color:var(--rust-orange);}
+.cover h1{font-size:clamp(34px,5vw,62px);line-height:1.16;max-width:16.5ch;}
+.cover .sub{margin-top:20px;font-size:clamp(17px,1.6vw,21px);color:var(--ink-soft);max-width:46ch;line-height:1.7;}
+.cover .meta{margin-top:34px;display:flex;gap:14px;flex-wrap:wrap;}
+.cover .meta span{font-family:var(--mono);font-size:12.5px;color:var(--ink);background:#fff;border:1px solid var(--panel-edge);padding:6px 13px;border-radius:999px;box-shadow:var(--shadow);}
+.swipe-hint{position:absolute;bottom:70px;left:0;display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:13.5px;}
+.swipe-hint svg{width:20px;height:20px;color:var(--rust-orange);animation:nudge 1.6s ease-in-out infinite;}
+
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes nudge{0%,100%{transform:translateX(0);}50%{transform:translateX(8px);}}
+@keyframes popIn{from{opacity:0;transform:scale(.8);}to{opacity:1;transform:scale(1);}}
+.slide.in-view .pop{animation:popIn .5s cubic-bezier(.3,1.4,.5,1) both;animation-delay:calc(var(--i,0)*.08s);}
+@keyframes pulse{0%,100%{opacity:.35;}50%{opacity:1;}}
+.pulse-dot{animation:pulse 1.8s ease-in-out infinite;}
+
+@media (max-width:860px){
+  .grid.cols-2,.grid.cols-3{grid-template-columns:1fr;}
+  .slide{padding:88px 6vw 90px 6vw;}
+  .cover .big-gear{opacity:.08;width:80vw;height:80vw;right:-20vw;}
+  .nav-btn{width:38px;height:38px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001s!important;transition-duration:.2s!important;}
+}
+</style>
+</head>
+<body>
+
+<svg class="defs-holder" aria-hidden="true">
+<defs>
+  <symbol id="gear" viewBox="0 0 100 100">
+    <g fill="currentColor">
+      <g id="tooth"><rect x="44" y="0" width="12" height="20" rx="3"/></g>
+      <use href="#tooth" transform="rotate(45 50 50)"/>
+      <use href="#tooth" transform="rotate(90 50 50)"/>
+      <use href="#tooth" transform="rotate(135 50 50)"/>
+      <use href="#tooth" transform="rotate(180 50 50)"/>
+      <use href="#tooth" transform="rotate(225 50 50)"/>
+      <use href="#tooth" transform="rotate(270 50 50)"/>
+      <use href="#tooth" transform="rotate(315 50 50)"/>
+      <circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="9"/>
+      <circle cx="50" cy="50" r="9" fill="currentColor"/>
+    </g>
+  </symbol>
+  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--rust-orange)"/>
+  </marker>
+  <marker id="arrow-soft" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-soft)"/>
+  </marker>
+  <marker id="arrow-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="var(--ai-teal)"/>
+  </marker>
+</defs>
+</svg>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="brand">
+  <svg class="gear-icon"><use href="#gear"/></svg>
+  <span><b>Rust AI</b> 工程实战 · Workspace</span>
+</div>
+<div class="counter"><b id="curNum">01</b> / <span id="totalNum">11</span></div>
+
+<button class="nav-btn prev" id="prevBtn" aria-label="上一页">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+</button>
+<button class="nav-btn next" id="nextBtn" aria-label="下一页">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+</button>
+<div class="dots" id="dots"></div>
+
+<div class="deck" id="deck">
+
+<!-- ============================================================ -->
+<!-- 01 封面 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <div class="cover">
+    <svg class="big-gear"><use href="#gear"/></svg>
+    <div class="kicker">
+      <svg class="rustmark"><use href="#gear"/></svg>
+      RUST AI 工程实战系列 · 第 5 讲
+    </div>
+    <h1>一个 <em>Workspace</em>，<br>如何撑起一个 AI 应用的骨架？</h1>
+    <p class="sub">Cargo 工作空间与多 Crate 工程实战 —— 把"能力工具层 · 业务核心层 · 交互入口层"三块拼图，装进同一个仓库里。</p>
+    <div class="meta">
+      <span>基础概念篇</span>
+      <span>代码实操篇</span>
+      <span>约 15 分钟</span>
+      <span>edition = "2024"</span>
+    </div>
+    <div class="swipe-hint">
+      <span>向右滑动 / 点击箭头，开始今天的内容</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 02 导言 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg rev" style="width:280px;height:280px;left:-70px;bottom:-70px;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">开篇词</div>
+    <h2 class="h2 reveal" style="--i:1">一个 AI 应用，远不止"调一次模型"那么简单</h2>
+    <p class="lead reveal" style="--i:2">哪怕只是一个命令行问答小工具，稍微认真一点做，代码里也会自然长出好几块职责：处理文本的小工具、组装 Prompt 与调用模型的核心逻辑、接收用户输入的命令行入口。把它们全塞进一个 <code class="inline">src/main.rs</code>，很快就会分不清"哪段是能复用的能力、哪段只是临时胶水代码"。</p>
+    <p class="lead reveal" style="--i:3">这一讲，我们用 <b style="color:var(--rust-orange)">Cargo Workspace</b> 把一个 AI 应用拆成职责清晰的几个 crate：工具层、业务层、入口层各自独立又能互相调用，为后面几节课要学的"真正接入大模型 API"打好工程地基。</p>
+    <div class="grid cols-2" style="margin-top:34px;">
+      <div class="pill reveal" style="--i:4">
+        <div class="dotmark"></div>
+        <p><b>第一部分 · 基础概念篇</b><br>建立 workspace / member crate / 依赖管理三个核心概念的直觉认识，配合结构图与依赖流向图。</p>
+      </div>
+      <div class="pill reveal" style="--i:5">
+        <div class="dotmark"></div>
+        <p><b>第二部分 · 代码实操篇</b><br>搭建一个三 crate 分层的 AI 问答工具骨架，完整代码与逐行讲解都在配套资料里。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 03 为什么需要 workspace -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg" style="width:320px;height:320px;right:-90px;top:-60px;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">基础概念篇 · 01</div>
+    <h2 class="h2 reveal" style="--i:1">一个 AI 应用，塞进单个 Crate 会怎样</h2>
+    <div class="grid cols-2" style="align-items:center;gap:40px;">
+      <div class="pill-list">
+        <div class="pill reveal" style="--i:2"><div class="dotmark"></div><p>文本处理小工具、Prompt 组装逻辑、命令行交互全挤在一个 <code class="inline">src/</code> 里，职责越来越模糊</p></div>
+        <div class="pill reveal" style="--i:3"><div class="dotmark"></div><p>只改了一行 CLI 参数解析，也要重新编译整个"巨石"AI 应用</p></div>
+        <div class="pill reveal" style="--i:4"><div class="dotmark"></div><p>想把"调用模型"的核心逻辑单独发布成库，给 Web 服务或另一个工具复用，却和 CLI 代码耦合，拆不出来</p></div>
+        <div class="pill reveal" style="--i:5"><div class="dotmark"></div><p>多个 AI 小工具各自一份 <code class="inline">Cargo.lock</code>，依赖版本对不齐</p></div>
+      </div>
+      <div class="diagram-card reveal" style="--i:3">
+        <svg viewBox="0 0 420 300" style="width:100%;height:auto;">
+          <rect x="40" y="30" width="180" height="140" rx="14" fill="#FBEAE3" stroke="var(--rust-orange)" stroke-width="2"/>
+          <text x="130" y="20" text-anchor="middle" font-family="var(--sc)" font-size="13" fill="var(--ink-soft)">单体 AI 应用 Crate</text>
+          <path class="draw" style="--len:60;--i:1" d="M65 60 L195 130" stroke="var(--ink-soft)" stroke-width="1.6" stroke-dasharray="60" opacity=".7"/>
+          <path class="draw" style="--len:60;--i:2" d="M65 130 L195 60" stroke="var(--ink-soft)" stroke-width="1.6" stroke-dasharray="60" opacity=".7"/>
+          <path class="draw" style="--len:60;--i:3" d="M65 95 L195 95" stroke="var(--ink-soft)" stroke-width="1.6" stroke-dasharray="60" opacity=".7"/>
+          <path class="draw" style="--len:60;--i:1" d="M130 60 L130 140" stroke="var(--ink-soft)" stroke-width="1.6" stroke-dasharray="60" opacity=".7"/>
+          <text x="130" y="100" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--rust-orange)">core+utils+cli</text>
+          <path class="draw" style="--len:60;--i:4" d="M235 100 L285 100" stroke="var(--rust-orange)" stroke-width="2.4" stroke-dasharray="60" marker-end="url(#arrow)"/>
+          <text x="260" y="88" text-anchor="middle" font-family="var(--sc)" font-size="11" fill="var(--rust-orange)">拆分</text>
+          <g>
+            <rect x="300" y="20" width="100" height="46" rx="10" fill="#fff" stroke="var(--rust-orange)" stroke-width="1.6" class="pop" style="--i:5"/>
+            <text x="350" y="47" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink)">ai-core</text>
+            <rect x="300" y="80" width="100" height="46" rx="10" fill="#fff" stroke="var(--rust-orange)" stroke-width="1.6" class="pop" style="--i:6"/>
+            <text x="350" y="107" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink)">ai-utils</text>
+            <rect x="300" y="140" width="100" height="46" rx="10" fill="#fff" stroke="var(--rust-orange)" stroke-width="1.6" class="pop" style="--i:7"/>
+            <text x="350" y="167" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--ink)">ai-cli</text>
+          </g>
+        </svg>
+        <p class="cap">拆分之后：能力层可被别的 AI 应用直接复用，入口层随便换</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 04 workspace 结构解剖图 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg slow" style="width:260px;height:260px;left:-60px;top:20%;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">基础概念篇 · 02</div>
+    <h2 class="h2 reveal" style="--i:1">Workspace 结构解剖图</h2>
+    <p class="lead reveal" style="--i:2;margin-bottom:20px;">根 <code class="inline">Cargo.toml</code> 只用 <code class="inline">[workspace]</code> 声明"这里有哪些成员"，本身不产出任何二进制或库；所有成员共享同一份 <code class="inline">Cargo.lock</code> 和同一个 <code class="inline">target/</code> 输出目录，避免重复编译、避免版本分裂。</p>
+    <div class="diagram-card reveal" style="--i:3;margin-top:18px;">
+      <svg viewBox="0 0 760 300" style="width:100%;height:auto;">
+        <rect x="16" y="18" width="150" height="42" rx="10" fill="#FBEAE3" stroke="var(--rust-orange)" stroke-width="2"/>
+        <text x="91" y="44" text-anchor="middle" font-family="var(--mono)" font-size="12.5" fill="var(--rust-orange)">ai-workspace/</text>
+
+        <path class="draw" style="--len:120;--i:1" d="M91 60 V90" stroke="var(--panel-edge)" stroke-width="2" stroke-dasharray="120"/>
+        <path class="draw" style="--len:120;--i:1" d="M91 90 H140" stroke="var(--panel-edge)" stroke-width="2" stroke-dasharray="120"/>
+        <rect x="140" y="72" width="150" height="36" rx="8" fill="#fff" stroke="var(--panel-edge)" stroke-width="1.6"/>
+        <text x="215" y="94" text-anchor="middle" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">Cargo.toml [workspace]</text>
+
+        <path class="draw" style="--len:120;--i:2" d="M91 90 V126" stroke="var(--panel-edge)" stroke-width="2" stroke-dasharray="120"/>
+        <path class="draw" style="--len:120;--i:2" d="M91 126 H140" stroke="var(--panel-edge)" stroke-width="2" stroke-dasharray="120"/>
+        <rect x="140" y="108" width="150" height="36" rx="8" fill="#fff" stroke="var(--panel-edge)" stroke-width="1.6"/>
+        <text x="215" y="130" text-anchor="middle" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">Cargo.lock（共享）</text>
+
+        <path class="draw" style="--len:120;--i:3" d="M91 126 V162" stroke="var(--panel-edge)" stroke-width="2" stroke-dasharray="120"/>
+        <path class="draw" style="--len:120;--i:3" d="M91 162 H140" stroke="var(--panel-edge)" stroke-width="2" stroke-dasharray="120"/>
+        <rect x="140" y="144" width="150" height="36" rx="8" fill="#fff" stroke="var(--panel-edge)" stroke-width="1.6"/>
+        <text x="215" y="166" text-anchor="middle" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">target/（共享产物）</text>
+
+        <path class="draw" style="--len:220;--i:4" d="M91 60 V235 H430" stroke="var(--rust-orange)" stroke-width="2" stroke-dasharray="220" opacity=".25"/>
+
+        <g class="pop" style="--i:6">
+          <rect x="430" y="20" width="290" height="66" rx="12" fill="#fff" stroke="var(--rust-orange)" stroke-width="1.8"/>
+          <text x="452" y="42" font-family="var(--mono)" font-weight="700" font-size="12.5" fill="var(--rust-orange)">ai-core/</text>
+          <text x="452" y="62" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)">Cargo.toml · src/lib.rs</text>
+          <path d="M330 235 H430 V53" stroke="var(--rust-orange)" stroke-width="1.6" fill="none" opacity=".55"/>
+        </g>
+        <g class="pop" style="--i:7">
+          <rect x="430" y="100" width="290" height="66" rx="12" fill="#fff" stroke="var(--rust-orange)" stroke-width="1.8"/>
+          <text x="452" y="122" font-family="var(--mono)" font-weight="700" font-size="12.5" fill="var(--rust-orange)">ai-utils/</text>
+          <text x="452" y="142" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)">Cargo.toml · src/lib.rs</text>
+          <path d="M330 235 H430 V133" stroke="var(--rust-orange)" stroke-width="1.6" fill="none" opacity=".55"/>
+        </g>
+        <g class="pop" style="--i:8">
+          <rect x="430" y="180" width="290" height="66" rx="12" fill="#fff" stroke="var(--rust-orange)" stroke-width="1.8"/>
+          <text x="452" y="202" font-family="var(--mono)" font-weight="700" font-size="12.5" fill="var(--rust-orange)">ai-cli/</text>
+          <text x="452" y="222" font-family="var(--mono)" font-size="11" fill="var(--ink-soft)">Cargo.toml · src/main.rs</text>
+          <path d="M330 235 H430 V213" stroke="var(--rust-orange)" stroke-width="1.6" fill="none" opacity=".55"/>
+        </g>
+      </svg>
+      <p class="cap">根目录只放"共享的东西"，每个成员自带一份完整的 Cargo.toml 与 src/</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 05 member crate 详解 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg" style="width:300px;height:300px;right:-80px;bottom:-80px;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">基础概念篇 · 03</div>
+    <h2 class="h2 reveal" style="--i:1">每个成员，都是一个独立的 Crate</h2>
+    <div class="grid cols-2">
+      <div class="card reveal" style="--i:2">
+        <span class="tag">lib crate</span>
+        <h3>库 —— 提供 AI 能力</h3>
+        <p>入口是 <code class="inline">src/lib.rs</code>，没有 <code class="inline">main</code> 函数；产出可被其他 crate 依赖的库，是"可复用的能力单元"。例如封装 Prompt 组装、模型调用抽象的 <b>ai-core</b>，与提供文本工具函数的 <b>ai-utils</b>。</p>
+      </div>
+      <div class="card reveal" style="--i:3">
+        <span class="tag teal">bin crate</span>
+        <h3>二进制 —— 面向用户</h3>
+        <p>入口是 <code class="inline">src/main.rs</code>，包含 <code class="inline">fn main()</code>；编译出可执行文件，是"面向用户的入口"。例如接收用户提问、调用 ai-core 的 <b>ai-cli</b>。</p>
+      </div>
+    </div>
+    <div class="pill reveal" style="--i:4;margin-top:20px;">
+      <div class="dotmark"></div>
+      <p>workspace 不限制成员类型的比例。AI 应用里健康的组合通常是<b>"多个 lib（能力）+ 一个 bin（入口）"</b>——今天入口是命令行，明天想换成 Web 服务，只需要新增一个 bin crate，ai-core 与 ai-utils 原封不动地复用。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 06 依赖管理机制 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg slow rev" style="width:280px;height:280px;left:-70px;top:-50px;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">基础概念篇 · 04</div>
+    <h2 class="h2 reveal" style="--i:1">依赖，怎么管才不乱</h2>
+    <div class="diagram-card reveal" style="--i:2;margin-bottom:22px;">
+      <svg viewBox="0 0 760 260" style="width:100%;height:auto;">
+        <rect x="290" y="14" width="180" height="48" rx="10" fill="#FBEAE3" stroke="var(--rust-orange)" stroke-width="2"/>
+        <text x="380" y="43" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="var(--rust-orange)">[workspace.dependencies]</text>
+
+        <path class="draw" style="--len:140;--i:1" marker-end="url(#arrow)" d="M340 62 C 260 110, 180 130, 120 158" fill="none" stroke="var(--rust-orange)" stroke-width="2" stroke-dasharray="140"/>
+        <path class="draw" style="--len:120;--i:2" marker-end="url(#arrow)" d="M380 62 V158" fill="none" stroke="var(--rust-orange)" stroke-width="2" stroke-dasharray="120"/>
+        <path class="draw" style="--len:140;--i:3" marker-end="url(#arrow)" d="M420 62 C 500 110, 580 130, 640 158" fill="none" stroke="var(--rust-orange)" stroke-width="2" stroke-dasharray="140"/>
+
+        <rect x="40" y="160" width="160" height="60" rx="10" fill="#fff" stroke="var(--panel-edge)" stroke-width="1.6"/>
+        <text x="120" y="184" text-anchor="middle" font-family="var(--mono)" font-weight="700" font-size="12" fill="var(--ink)">ai-utils</text>
+        <text x="120" y="202" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-soft)">= workspace = true</text>
+
+        <rect x="300" y="160" width="160" height="60" rx="10" fill="#fff" stroke="var(--panel-edge)" stroke-width="1.6"/>
+        <text x="380" y="184" text-anchor="middle" font-family="var(--mono)" font-weight="700" font-size="12" fill="var(--ink)">ai-core</text>
+        <text x="380" y="202" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-soft)">= workspace = true</text>
+
+        <rect x="560" y="160" width="160" height="60" rx="10" fill="#fff" stroke="var(--panel-edge)" stroke-width="1.6"/>
+        <text x="640" y="184" text-anchor="middle" font-family="var(--mono)" font-weight="700" font-size="12" fill="var(--ink)">ai-cli</text>
+        <text x="640" y="202" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-soft)">= workspace = true</text>
+
+        <path class="draw" style="--len:100;--i:4" marker-end="url(#arrow-soft)" d="M300 190 H200" fill="none" stroke="var(--ink-soft)" stroke-width="2" stroke-dasharray="100"/>
+        <text x="250" y="182" text-anchor="middle" font-family="var(--sc)" font-size="10.5" fill="var(--ink-soft)">path 依赖</text>
+      </svg>
+      <p class="cap">上层统一声明版本，下层用 workspace = true 继承；crate 之间再用 path 互相调用</p>
+    </div>
+    <div class="pill-list">
+      <div class="pill reveal" style="--i:5"><div class="dotmark"></div><p><b>统一声明</b>：根 Cargo.toml 的 <code class="inline">[workspace.dependencies]</code> 里写好每个依赖的版本，例如 anyhow、clap，全仓库只声明一次</p></div>
+      <div class="pill reveal" style="--i:6"><div class="dotmark"></div><p><b>继承版本</b>：成员 crate 里写 <code class="inline">xxx = &#123; workspace = true &#125;</code>，版本升级只改根目录这一处</p></div>
+      <div class="pill reveal" style="--i:7"><div class="dotmark"></div><p><b>本地互相依赖</b>：crate 之间通过 <code class="inline">path = "../ai-utils"</code> 联调，不必先发布到 crates.io 也能本地跑通</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 07 Cargo.toml 关键字段速查 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg" style="width:260px;height:260px;right:-70px;top:10%;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">基础概念篇 · 05</div>
+    <h2 class="h2 reveal" style="--i:1">根 Cargo.toml 关键字段速查</h2>
+    <div class="grid cols-3">
+      <div class="card reveal" style="--i:2"><h3>[workspace]</h3><p><code class="inline">members</code> 列出所有成员目录，是这份文件的核心。</p></div>
+      <div class="card reveal" style="--i:3"><h3>resolver = "3"</h3><p>使用新版依赖解析算法，避免不同成员因 feature 合并产生的隐性冲突，新建 workspace 建议显式声明。</p></div>
+      <div class="card reveal" style="--i:4"><h3>[workspace.package]</h3><p>统一 <code class="inline">edition</code>、<code class="inline">version</code>、<code class="inline">authors</code>，成员用 <code class="inline">edition.workspace = true</code> 继承。</p></div>
+      <div class="card reveal" style="--i:5"><h3>[workspace.dependencies]</h3><p>统一声明第三方依赖版本，成员用 <code class="inline">= &#123;workspace = true&#125;</code> 继承。</p></div>
+      <div class="card reveal" style="--i:6"><h3>path 依赖</h3><p>成员之间互相引用，用相对路径指向兄弟目录，本地联调零成本。</p></div>
+      <div class="card reveal" style="--i:7"><h3>Cargo.lock 唯一</h3><p>整个 workspace 只有一份，成员之间依赖版本天然一致，不会打架。</p></div>
+    </div>
+    <div class="code-chip reveal" style="--i:8;margin-top:22px;">
+<span class="cm"># 根 Cargo.toml 骨架（精简示意）</span>
+[<span class="kw">workspace</span>]
+resolver = <span class="str">"3"</span>
+members = [<span class="str">"ai-utils"</span>, <span class="str">"ai-core"</span>, <span class="str">"ai-cli"</span>]
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 08 概念篇小结 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg slow" style="width:300px;height:300px;left:-80px;bottom:-60px;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">基础概念篇 · 小结</div>
+    <h2 class="h2 reveal" style="--i:1">概念一图记</h2>
+    <div class="diagram-card reveal" style="--i:2">
+      <svg viewBox="0 0 760 240" style="width:100%;height:auto;">
+        <rect x="300" y="16" width="160" height="48" rx="10" fill="#FBEAE3" stroke="var(--rust-orange)" stroke-width="2"/>
+        <text x="380" y="45" text-anchor="middle" font-family="var(--sc)" font-weight="700" font-size="13" fill="var(--rust-orange)">Workspace</text>
+
+        <path class="draw" style="--len:110;--i:1" marker-end="url(#arrow)" d="M340 64 C 280 100, 220 100, 170 128" fill="none" stroke="var(--rust-orange)" stroke-width="2" stroke-dasharray="110"/>
+        <path class="draw" style="--len:110;--i:2" marker-end="url(#arrow)" d="M420 64 C 480 100, 540 100, 590 128" fill="none" stroke="var(--rust-orange)" stroke-width="2" stroke-dasharray="110"/>
+
+        <rect x="80" y="130" width="180" height="50" rx="10" fill="#fff" stroke="var(--panel-edge)" stroke-width="1.6"/>
+        <text x="170" y="160" text-anchor="middle" font-family="var(--sc)" font-size="12.5" fill="var(--ink)">Member Crate</text>
+
+        <rect x="500" y="130" width="180" height="50" rx="10" fill="#fff" stroke="var(--panel-edge)" stroke-width="1.6"/>
+        <text x="590" y="160" text-anchor="middle" font-family="var(--sc)" font-size="12.5" fill="var(--ink)">依赖管理</text>
+
+        <path class="draw" style="--len:60;--i:3" marker-end="url(#arrow-soft)" d="M170 180 V206" stroke="var(--ink-soft)" stroke-width="1.8" stroke-dasharray="60" fill="none"/>
+        <text x="170" y="220" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-soft)">lib / bin</text>
+
+        <path class="draw" style="--len:60;--i:4" marker-end="url(#arrow-soft)" d="M590 180 V206" stroke="var(--ink-soft)" stroke-width="1.8" stroke-dasharray="60" fill="none"/>
+        <text x="590" y="220" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-soft)">workspace = true / path</text>
+      </svg>
+    </div>
+    <div class="grid cols-3" style="margin-top:22px;">
+      <div class="pill reveal" style="--i:5"><div class="dotmark"></div><p>一份根 Cargo.toml 用 <b>members</b> 统领多个 crate，共享 Lock 与产物目录</p></div>
+      <div class="pill reveal" style="--i:6"><div class="dotmark"></div><p>成员分 <b>lib（能力）</b>与 <b>bin（入口）</b>两种角色，各自独立又互相调用</p></div>
+      <div class="pill reveal" style="--i:7"><div class="dotmark"></div><p>依赖版本<b>向上统一声明</b>，crate 之间<b>用 path 本地联调</b></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 09 代码实操：AI 问答工具架构 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg" style="width:300px;height:300px;right:-80px;top:-60px;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">代码实操篇</div>
+    <h2 class="h2 reveal" style="--i:1">生产级案例：三 Crate 分层的 AI 问答工具</h2>
+    <p class="lead reveal" style="--i:2;margin-bottom:16px;">目标：搭一个命令行 AI 问答小工具 <b>ai-cli</b>，内部依赖负责"组装 Prompt、定义模型调用抽象"的 <b>ai-core</b>，再往下依赖纯文本工具 <b>ai-utils</b>。本讲还没学到真实的网络请求（后面模块会学），这里先用可预测的 Mock 客户端把"调用大模型"的接口占好位置。</p>
+    <div class="diagram-card reveal" style="--i:3">
+      <svg viewBox="0 0 760 290" style="width:100%;height:auto;">
+        <rect x="290" y="10" width="180" height="42" rx="9" fill="#FBEAE3" stroke="var(--rust-orange)" stroke-width="1.8"/>
+        <text x="380" y="36" text-anchor="middle" font-family="var(--mono)" font-size="11.5" fill="var(--rust-orange)">[workspace.dependencies]</text>
+        <path class="draw" style="--len:60;--i:1" marker-end="url(#arrow)" d="M380 52 V78" stroke="var(--rust-orange)" stroke-width="2" stroke-dasharray="60" fill="none"/>
+
+        <rect x="250" y="80" width="260" height="58" rx="12" fill="#fff" stroke="var(--rust-orange)" stroke-width="2"/>
+        <text x="380" y="105" text-anchor="middle" font-family="var(--mono)" font-weight="700" font-size="13" fill="var(--ink)">ai-cli</text>
+        <text x="380" y="123" text-anchor="middle" font-family="var(--sc)" font-size="10.5" fill="var(--ink-soft)">clap 解析问题 · 打印回答</text>
+
+        <path class="draw" style="--len:60;--i:2" marker-end="url(#arrow)" d="M380 138 V164" stroke="var(--rust-orange)" stroke-width="2.2" stroke-dasharray="60" fill="none"/>
+
+        <rect x="250" y="166" width="260" height="58" rx="12" fill="#fff" stroke="var(--rust-orange)" stroke-width="2"/>
+        <text x="380" y="188" text-anchor="middle" font-family="var(--mono)" font-weight="700" font-size="13" fill="var(--ink)">ai-core</text>
+        <text x="380" y="206" text-anchor="middle" font-family="var(--sc)" font-size="10.5" fill="var(--ink-soft)">LlmClient trait · Prompt 组装 · Mock 实现</text>
+
+        <path class="draw" style="--len:60;--i:3" marker-end="url(#arrow)" d="M380 224 V250" stroke="var(--rust-orange)" stroke-width="2.2" stroke-dasharray="60" fill="none"/>
+
+        <rect x="250" y="252" width="260" height="30" rx="10" fill="#fff" stroke="var(--rust-orange)" stroke-width="2" class="pop" style="--i:4"/>
+        <text x="380" y="271" text-anchor="middle" font-family="var(--mono)" font-weight="700" font-size="12" fill="var(--ink)">ai-utils · truncate_prompt / estimate_tokens</text>
+
+        <circle cx="600" cy="109" r="5" fill="var(--ai-teal)" class="pulse-dot"/>
+        <text x="615" y="113" font-family="var(--sc)" font-size="11.5" fill="var(--ai-teal)">用户交互层</text>
+        <circle cx="600" cy="195" r="5" fill="var(--ai-teal)" class="pulse-dot"/>
+        <text x="615" y="199" font-family="var(--sc)" font-size="11.5" fill="var(--ai-teal)">AI 业务核心</text>
+        <circle cx="600" cy="267" r="5" fill="var(--ai-teal)" class="pulse-dot"/>
+        <text x="615" y="271" font-family="var(--sc)" font-size="11.5" fill="var(--ai-teal)">通用文本工具</text>
+      </svg>
+    </div>
+    <div class="grid cols-3" style="margin-top:20px;">
+      <div class="pill reveal" style="--i:5"><div class="dotmark"></div><p>依赖方向<b>单向</b>：cli → core → utils，utils 是最底层，不反向依赖任何人</p></div>
+      <div class="pill reveal" style="--i:6"><div class="dotmark"></div><p>ai-core 里的 <code class="inline">LlmClient</code> trait 是"面向接口编程"的关键——今天接 Mock，以后无缝换成真实模型</p></div>
+      <div class="pill reveal" style="--i:7"><div class="dotmark"></div><p>anyhow / clap 版本统一写在 <code class="inline">[workspace.dependencies]</code>，三个成员各自继承</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 10 运行验证 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg slow rev" style="width:260px;height:260px;left:-60px;top:10%;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">代码实操篇 · 运行验证</div>
+    <h2 class="h2 reveal" style="--i:1">跑起来看看效果</h2>
+    <div class="terminal reveal" style="--i:2">
+      <div class="bar"><span></span><span></span><span></span></div>
+      <pre><span class="p">$</span> cargo build --workspace
+<span class="out">   Compiling ai-utils v0.1.0</span>
+<span class="out">   Compiling ai-core v0.1.0</span>
+<span class="out">   Compiling ai-cli v0.1.0</span>
+<span class="ok">    Finished `dev` profile [unoptimized + debuginfo] target(s)</span>
+
+<span class="p">$</span> cargo run -p ai-cli -- <span class="ok">"workspace 和普通 crate 有什么区别？"</span>
+<span class="ok">[模拟回答] 已收到 18 字的提问，这里将来会替换为真实模型输出。</span>
+<span class="out">(约消耗 6 tokens)</span></pre>
+    </div>
+    <div class="pill reveal" style="--i:3;margin-top:20px;">
+      <div class="dotmark"></div>
+      <p>关键只在根 <code class="inline">Cargo.toml</code> 里那几行 <code class="inline">[workspace] members = [...]</code>——它是让 cargo 认识三个 crate 的唯一开关。三份 Cargo.toml 与三个源文件，每层只做一件事，代码量都很克制。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 11 小结 -->
+<!-- ============================================================ -->
+<section class="slide">
+  <svg class="gear-bg slow" style="width:320px;height:320px;right:-90px;bottom:-70px;"><use href="#gear"/></svg>
+  <div class="slide-inner">
+    <div class="eyebrow reveal">本讲小结</div>
+    <h2 class="h2 reveal" style="--i:1">验证成果 &amp; 下一讲预告</h2>
+    <div class="grid cols-2" style="align-items:start;">
+      <div class="card reveal" style="--i:2">
+        <h3 style="margin-bottom:10px;">今天你已经掌握</h3>
+        <div class="check"><div class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg></div><p>用 <code class="inline">[workspace] members</code> 声明多 crate 仓库</p></div>
+        <div class="check"><div class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg></div><p>分得清 lib crate 与 bin crate 的职责边界</p></div>
+        <div class="check"><div class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg></div><p>会用 workspace.dependencies 统一版本、用 path 本地互相依赖</p></div>
+        <div class="check"><div class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg></div><p>搭出了一个 "cli → core → utils" 的 AI 应用分层骨架</p></div>
+      </div>
+      <div class="terminal reveal" style="--i:3">
+        <div class="bar"><span></span><span></span><span></span></div>
+        <pre><span class="cm"># 常用命令回顾</span>
+<span class="p">$</span> cargo build --workspace
+<span class="p">$</span> cargo test --workspace
+<span class="p">$</span> cargo run -p ai-cli -- <span class="ok">"你的问题"</span>
+<span class="p">$</span> cargo check --workspace</pre>
+      </div>
+    </div>
+    <div class="pill reveal" style="--i:4;margin-top:20px;">
+      <div class="dotmark"></div>
+      <p><b>下一讲预告：</b>第 6 讲 —— 用 reqwest 发起第一个 HTTP 请求，为 ai-core 里的 <code class="inline">LlmClient</code> 接上真正的网络能力。</p>
+    </div>
+  </div>
+</section>
+
+</div><!-- /deck -->
+
+<script>
+(function(){
+  const deck = document.getElementById('deck');
+  const slides = Array.from(deck.querySelectorAll('.slide'));
+  const dotsWrap = document.getElementById('dots');
+  const progressFill = document.getElementById('progressFill');
+  const curNum = document.getElementById('curNum');
+  const totalNum = document.getElementById('totalNum');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const total = slides.length;
+  totalNum.textContent = String(total).padStart(2,'0');
+
+  slides.forEach((s,i)=>{
+    const d = document.createElement('button');
+    d.className = 'dot' + (i===0?' active':'');
+    d.setAttribute('aria-label','跳转到第 '+(i+1)+' 页');
+    d.addEventListener('click', ()=> goTo(i));
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function goTo(i){
+    i = Math.max(0, Math.min(total-1, i));
+    deck.scrollTo({left: i * deck.clientWidth, behavior:'smooth'});
+  }
+  function currentIndex(){
+    return Math.round(deck.scrollLeft / deck.clientWidth);
+  }
+  function updateUI(){
+    const i = currentIndex();
+    dots.forEach((d,idx)=>d.classList.toggle('active', idx===i));
+    progressFill.style.width = ((i)/(total-1))*100 + '%';
+    curNum.textContent = String(i+1).padStart(2,'0');
+    prevBtn.toggleAttribute('disabled', i===0);
+    nextBtn.toggleAttribute('disabled', i===total-1);
+  }
+
+  let rafId = null;
+  deck.addEventListener('scroll', ()=>{
+    if(rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(updateUI);
+  }, {passive:true});
+
+  prevBtn.addEventListener('click', ()=> goTo(currentIndex()-1));
+  nextBtn.addEventListener('click', ()=> goTo(currentIndex()+1));
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='ArrowRight' || e.key==='PageDown'){ e.preventDefault(); goTo(currentIndex()+1); }
+    if(e.key==='ArrowLeft' || e.key==='PageUp'){ e.preventDefault(); goTo(currentIndex()-1); }
+  });
+
+  let isDown=false, startX=0, startScroll=0, dragged=false;
+  deck.addEventListener('mousedown',(e)=>{
+    isDown=true; dragged=false; startX=e.pageX; startScroll=deck.scrollLeft; deck.style.scrollBehavior='auto';
+  });
+  window.addEventListener('mouseup',()=>{
+    if(!isDown) return;
+    isDown=false; deck.style.scrollBehavior='smooth';
+    if(dragged) goTo(currentIndex());
+  });
+  window.addEventListener('mousemove',(e)=>{
+    if(!isDown) return;
+    const dx = e.pageX - startX;
+    if(Math.abs(dx) > 4) dragged = true;
+    deck.scrollLeft = startScroll - dx;
+  });
+
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      en.target.classList.toggle('in-view', en.intersectionRatio > 0.55);
+    });
+  }, {threshold:[0,.55,1]});
+  slides.forEach(s=>io.observe(s));
+
+  window.addEventListener('resize', ()=> goTo(currentIndex()));
+  updateUI();
+})();
+</script>
+</body>
+</html>
